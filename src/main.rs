@@ -1,7 +1,12 @@
 use std::fmt::Debug;
 
 fn main() {
-    let mut formula: Formula = to_formula("1/3 + 2/3 + 3/4");
+    let fraction = fraction_calculation("1/3 + 2/6 × 3/5");
+    println!("{:?}", fraction)
+}
+
+fn fraction_calculation(formula: &str) -> Fraction {
+    let mut formula: Formula = to_formula(formula);
 
     print_formula(&formula);
 
@@ -39,8 +44,17 @@ fn main() {
 
         print_formula(&formula);
     }
+
+    let result = formula[0].fraction();
+    let numerator = result.numerator;
+    let denominator = result.denominator;
+
+    let divide = reduction(numerator, denominator);
+
+    Fraction::new(numerator / divide, denominator / divide)
 }
 
+/// 計算
 fn calculation(symbol: Symbol, f1: Fraction, f2: Fraction) -> Fraction {
     match symbol {
         Symbol::Plus => {
@@ -60,6 +74,7 @@ fn calculation(symbol: Symbol, f1: Fraction, f2: Fraction) -> Fraction {
     }
 }
 
+// 公倍数
 fn common_multiple(num1: i64, num2: i64) -> (i64, i64, i64) {
     let mut n = 1;
 
@@ -80,6 +95,32 @@ fn common_multiple(num1: i64, num2: i64) -> (i64, i64, i64) {
     }
 }
 
+/// 公約数
+fn reduction(num1: i64, num2: i64) -> i64 {
+    let mut v1 = Vec::new();
+    let mut v2 = Vec::new();
+
+    for i in 1..num1 {
+        if num1 % i == 0 {
+            v1.push(i);
+        }
+    }
+    for i in 1..num2 {
+        if num2 % i == 0 {
+            v2.push(i);
+        }
+    }
+
+    for num in v1.iter().rev() {
+        if let Some(result) = v2.iter().find(|&x| x == num) {
+            return *result;
+        }
+    }
+
+    1
+}
+
+/// 文字列を式に変換
 fn to_formula(str: &str) -> Formula {
     let formula = str.split(' ').map(|str| str.into()).collect();
     if !check(&formula) {
@@ -88,6 +129,7 @@ fn to_formula(str: &str) -> Formula {
     formula
 }
 
+/// 式が成り立つか判定
 fn check(formula: &Formula) -> bool {
     if formula.len() % 2 == 0 {
         return false;
@@ -115,6 +157,7 @@ fn print_formula(formula: &Formula) {
     println!()
 }
 
+/// 式
 type Formula = Vec<Item>;
 
 enum Item {
@@ -122,7 +165,7 @@ enum Item {
     Fraction(Fraction),
 }
 
-// 記号
+/// 記号
 #[derive(Clone, Copy)]
 enum Symbol {
     Plus,
@@ -131,13 +174,16 @@ enum Symbol {
     Divided,
 }
 
-// 分数
+/// 分数
 #[derive(Clone, Copy)]
 struct Fraction {
-    numerator: i64,   // 分子
-    denominator: i64, // 分母
+    /// 分子
+    numerator: i64,
+    /// 分母
+    denominator: i64,
 }
 
+/// 式をItemに変換
 const fn fraction(numerator: i64, denominator: i64) -> Item {
     Item::Fraction(Fraction::new(numerator, denominator))
 }
