@@ -51,25 +51,67 @@ fn fraction_calculation(formula: &str) -> Fraction {
 
     let divide = reduction(numerator, denominator);
 
-    Fraction::new(numerator / divide, denominator / divide)
+    Fraction::new(numerator / divide, denominator / divide, result.sign)
 }
 
 /// 計算
-fn calculation(symbol: Symbol, f1: Fraction, f2: Fraction) -> Fraction {
+fn calculation(mut symbol: Symbol, mut f1: Fraction, mut f2: Fraction) -> Fraction {
+    let mut sign = true;
+    if symbol == Symbol::Minus || symbol == Symbol::Plus {
+        if !f1.sign {
+            let f = f1;
+            f1 = f2;
+            f2 = f;
+            symbol = Symbol::Minus;
+        } else if !f2.sign {
+            let f = f1;
+            f1 = f2;
+            f2 = f;
+            symbol = Symbol::Minus
+        } else if !f1.sign && !f2.sign {
+            sign = false;
+            symbol = Symbol::Plus;
+        }
+    }
+
     match symbol {
         Symbol::Plus => {
             let (f1_m, f2_m, d) = common_multiple(f1.denominator, f2.denominator);
-            Fraction::new((f1.numerator * f1_m) + (f2.numerator * f2_m), d)
+            Fraction::new((f1.numerator * f1_m) + (f2.numerator * f2_m), d, sign)
         }
         Symbol::Minus => {
             let (f1_m, f2_m, d) = common_multiple(f1.denominator, f1.denominator);
-            Fraction::new((f1.numerator * f1_m) - (f2.numerator * f2_m), d)
+            Fraction::new((f1.numerator * f1_m) - (f2.numerator * f2_m), d, sign)
         }
         Symbol::Times => {
-            Fraction::new(f1.numerator * f2.numerator, f1.denominator * f2.denominator)
+            if !f1.sign || !f2.sign {
+                Fraction::new(
+                    f1.numerator * f2.numerator,
+                    f1.denominator * f2.denominator,
+                    false,
+                )
+            } else {
+                Fraction::new(
+                    f1.numerator * f2.numerator,
+                    f1.denominator * f2.denominator,
+                    true,
+                )
+            }
         }
         Symbol::Divided => {
-            Fraction::new(f1.numerator * f2.denominator, f1.denominator * f2.numerator)
+            if !f1.sign || !f2.sign {
+                Fraction::new(
+                    f1.numerator * f2.numerator,
+                    f1.denominator * f2.denominator,
+                    false,
+                )
+            } else {
+                Fraction::new(
+                    f1.numerator * f2.numerator,
+                    f1.denominator * f2.denominator,
+                    true,
+                )
+            }
         }
     }
 }
@@ -166,7 +208,7 @@ enum Item {
 }
 
 /// 記号
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Symbol {
     Plus,
     Minus,
@@ -181,11 +223,13 @@ struct Fraction {
     numerator: i64,
     /// 分母
     denominator: i64,
+    /// 符号
+    sign: bool,
 }
 
 /// 式をItemに変換
-const fn fraction(numerator: i64, denominator: i64) -> Item {
-    Item::Fraction(Fraction::new(numerator, denominator))
+const fn fraction(numerator: i64, denominator: i64, sign: bool) -> Item {
+    Item::Fraction(Fraction::new(numerator, denominator, sign))
 }
 
 const PLUS: Item = Item::Symbol(Symbol::Plus);
@@ -209,10 +253,11 @@ impl Item {
 }
 
 impl Fraction {
-    const fn new(numerator: i64, denominator: i64) -> Fraction {
+    const fn new(numerator: i64, denominator: i64, sign: bool) -> Fraction {
         Fraction {
             numerator,
             denominator,
+            sign,
         }
     }
 }
@@ -226,7 +271,21 @@ impl From<&str> for Item {
             "÷" => DIVIDED,
             _ => {
                 let nums: Vec<i64> = str.split('/').map(|s| s.trim().parse().unwrap()).collect();
-                fraction(nums[0], nums[1])
+                let mut sign = true;
+                let mut n = nums[0];
+                let mut d = nums[1];
+                if n < 0 && d < 0 {
+                    n *= -1;
+                    d *= -1;
+                    sign = true;
+                } else if n < 0 {
+                    n *= -1;
+                    sign = false;
+                } else if d < 0 {
+                    d *= -1;
+                    sign = false;
+                }
+                fraction(n as i64, d as i64, sign)
             }
         }
     }
